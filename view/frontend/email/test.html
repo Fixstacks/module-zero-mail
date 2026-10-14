@@ -1,0 +1,18 @@
+<!--
+/**
+ * Copyright © 2026 Roman Pasichnyk
+ * SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
+ */
+-->
+<!--@subject {{trans "Test email from %store_name" store_name=$store.frontend_name}} @-->
+<!--@vars {
+"var transport":"Transport"
+} @-->
+
+{{template config_path="design/email/header_template"}}
+
+<p>{{trans "This is a test email from the store's admin (Stores > Configuration > Zero > Mail)."}}</p>
+<p>{{trans "Sent through: %transport" transport=$transport}}</p>
+<p>{{trans "If you can read this, the store's emails reach this mailbox."}}</p>
+
+{{template config_path="design/email/footer_template"}}

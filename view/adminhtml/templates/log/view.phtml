@@ -1,0 +1,58 @@
+<?php
+/**
+ * Copyright © 2026 Roman Pasichnyk
+ * SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
+ *
+ * One Email Log entry. The email itself in a sandboxed iframe: its HTML, no
+ * scripts, no access to the admin page.
+ *
+ * @var \Magento\Backend\Block\Template $block
+ * @var \Magento\Framework\Escaper $escaper
+ */
+$entry = (array) $block->getData('entry');
+$recipients = json_decode((string) ($entry['recipients'] ?? ''), true) ?: [];
+$list = static fn (array $addresses) => implode(', ', array_map(
+    static fn (array $a) => $a['name'] ? $a['name'] . ' <' . $a['email'] . '>' : $a['email'],
+    $addresses
+));
+$rows = [
+    (string) __('Date') => $block->formatDate($entry['created_at'], \IntlDateFormatter::MEDIUM, true),
+    (string) __('Status') => $entry['status'] . ($entry['error'] ? ': ' . $entry['error'] : ''),
+    (string) __('Send Through') => $entry['transport']
+        . ($entry['message_id'] ? ' (' . $entry['message_id'] . ')' : ''),
+    (string) __('From') => (string) $entry['sender'],
+    (string) __('To') => $list($recipients['to'] ?? []),
+    (string) __('Cc') => $list($recipients['cc'] ?? []),
+    (string) __('Bcc') => $list($recipients['bcc'] ?? []),
+    (string) __('Resent From') => $entry['resent_from'] ? '#' . $entry['resent_from'] : '',
+];
+$body = (string) $entry['body'];
+$srcdoc = $entry['body_type'] === 'plain'
+    ? '<pre style="white-space:pre-wrap;font-family:monospace">' . $escaper->escapeHtml($body) . '</pre>'
+    : $body;
+?>
+<div class="page-actions-buttons" style="margin-bottom: 2rem;">
+    <a class="action-default back" href="<?= $escaper->escapeUrl($block->getUrl('*/*/index')) ?>">
+        <?= $escaper->escapeHtml(__('Back')) ?>
+    </a>
+    <form method="post" action="<?= $escaper->escapeUrl($block->getUrl('*/*/resend', ['id' => $entry['log_id']])) ?>"
+          style="display: inline;">
+        <?= $block->getBlockHtml('formkey') ?>
+        <button type="submit" class="action-primary"><?= $escaper->escapeHtml(__('Resend')) ?></button>
+    </form>
+</div>
+<table class="admin__table-secondary">
+    <tbody>
+    <?php foreach ($rows as $label => $value): ?>
+        <?php if ($value !== ''): ?>
+            <tr>
+                <th><?= $escaper->escapeHtml($label) ?></th>
+                <td><?= $escaper->escapeHtml($value) ?></td>
+            </tr>
+        <?php endif; ?>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<iframe sandbox="" title="<?= $escaper->escapeHtmlAttr($entry['subject']) ?>"
+        srcdoc="<?= $escaper->escapeHtmlAttr($srcdoc, false) ?>"
+        style="width: 100%; height: 70vh; border: 1px solid #ccc; margin-top: 2rem; background: #fff;"></iframe>

@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!--
+    Copyright © 2026 Roman Pasichnyk
+    SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+    <table name="zero_mail_log" resource="default" engine="innodb" comment="Zero Mail Log">
+        <column xsi:type="int" name="log_id" unsigned="true" nullable="false" identity="true" comment="Log ID"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Created At"/>
+        <column xsi:type="varchar" name="status" nullable="false" length="16" comment="sending, sent, logged, skipped, disabled, failed"/>
+        <column xsi:type="varchar" name="transport" nullable="false" length="16" comment="magento, ses, log"/>
+        <column xsi:type="varchar" name="subject" nullable="true" length="255" comment="Subject"/>
+        <column xsi:type="varchar" name="sender" nullable="true" length="255" comment="From"/>
+        <column xsi:type="varchar" name="recipient" nullable="true" length="512" comment="To, for the grid"/>
+        <column xsi:type="text" name="recipients" nullable="true" comment="To, Cc, Bcc as JSON"/>
+        <column xsi:type="mediumtext" name="body" nullable="true" comment="Body"/>
+        <column xsi:type="varchar" name="body_type" nullable="false" length="8" default="html" comment="html or plain"/>
+        <column xsi:type="text" name="error" nullable="true" comment="Error"/>
+        <column xsi:type="varchar" name="message_id" nullable="true" length="255" comment="Transport Message ID"/>
+        <column xsi:type="int" name="resent_from" unsigned="true" nullable="true" comment="Resent From Log ID"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="log_id"/>
+        </constraint>
+        <index referenceId="ZERO_MAIL_LOG_CREATED_AT" indexType="btree">
+            <column name="created_at"/>
+        </index>
+        <index referenceId="ZERO_MAIL_LOG_STATUS" indexType="btree">
+            <column name="status"/>
+        </index>
+        <index referenceId="ZERO_MAIL_LOG_RECIPIENT_SUBJECT" indexType="fulltext">
+            <column name="recipient"/>
+            <column name="subject"/>
+        </index>
+    </table>
+</schema>

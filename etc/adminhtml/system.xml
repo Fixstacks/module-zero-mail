@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<!--
+    Copyright © 2026 Roman Pasichnyk
+    SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="zero_mail" translate="label" type="text" sortOrder="97" showInDefault="1">
+            <label>Mail</label>
+            <tab>zero</tab>
+            <resource>Zero_Mail::config</resource>
+            <group id="general" translate="label comment" type="text" sortOrder="10" showInDefault="1">
+                <label>Sending</label>
+                <comment><![CDATA[Every email the store sends is in Marketing > Communications > Email Log: to whom, sent or not and why, the email itself.]]></comment>
+                <field id="transport" translate="label comment" type="select" sortOrder="10" showInDefault="1" canRestore="1">
+                    <label>Send Through</label>
+                    <source_model>Zero\Mail\Model\Source\Transport</source_model>
+                    <comment><![CDATA[Magento: Advanced > System > Mail Sending Settings (sendmail or SMTP). Amazon SES: its API with the server's AWS credentials (an EC2 role allowed ses:SendRawEmail), nothing to enter here. Log only: nothing leaves.]]></comment>
+                </field>
+                <field id="sender_email" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Sender Email for All Emails</label>
+                    <validate>validate-email</validate>
+                    <comment>Replaces the sender's address (Store Email Addresses) in every email, keeping its name. With SES: an address on a verified domain. Empty: as set in Store Email Addresses.</comment>
+                </field>
+                <field id="test_domains" translate="label comment" type="textarea" sortOrder="30" showInDefault="1" canRestore="1">
+                    <label>Test Address Domains</label>
+                    <comment>One per line, subdomains included. An email only to such addresses is logged, not sent.</comment>
+                </field>
+                <field id="log_days" translate="label comment" type="text" sortOrder="40" showInDefault="1" canRestore="1">
+                    <label>Keep the Log (days)</label>
+                    <validate>required-entry validate-digits validate-greater-than-zero</validate>
+                </field>
+                <field id="test" translate="label" type="button" sortOrder="50" showInDefault="1">
+                    <label>Send Test Email</label>
+                    <frontend_model>Zero\Mail\Block\Adminhtml\System\Config\TestButton</frontend_model>
+                </field>
+            </group>
+            <group id="ses" translate="label" type="text" sortOrder="20" showInDefault="1">
+                <label>Amazon SES</label>
+                <depends><field id="zero_mail/general/transport">ses</field></depends>
+                <field id="region" translate="label" type="text" sortOrder="10" showInDefault="1" canRestore="1">
+                    <label>Region</label>
+                    <validate>required-entry</validate>
+                </field>
+                <field id="configuration_set" translate="label comment" type="text" sortOrder="20" showInDefault="1">
+                    <label>Configuration Set</label>
+                    <comment>Optional: for SES event publishing (bounces, opens).</comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

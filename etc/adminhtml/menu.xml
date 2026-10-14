@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!--
+    Copyright © 2026 Roman Pasichnyk
+    SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <add id="Zero_Mail::log" title="Email Log" translate="title" module="Zero_Mail" sortOrder="50"
+             parent="Magento_Backend::marketing_communications" action="zero_mail/log/index" resource="Zero_Mail::log"/>
+    </menu>
+</config>

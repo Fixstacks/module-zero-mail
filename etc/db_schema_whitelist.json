@@ -1,0 +1,27 @@
+{
+    "zero_mail_log": {
+        "column": {
+            "log_id": true,
+            "created_at": true,
+            "status": true,
+            "transport": true,
+            "subject": true,
+            "sender": true,
+            "recipient": true,
+            "recipients": true,
+            "body": true,
+            "body_type": true,
+            "error": true,
+            "message_id": true,
+            "resent_from": true
+        },
+        "index": {
+            "ZERO_MAIL_LOG_CREATED_AT": true,
+            "ZERO_MAIL_LOG_STATUS": true,
+            "ZERO_MAIL_LOG_RECIPIENT_SUBJECT": true
+        },
+        "constraint": {
+            "PRIMARY": true
+        }
+    }
+}
