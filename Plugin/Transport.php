@@ -26,7 +26,9 @@ class Transport
     public function aroundSendMessage(TransportInterface $subject, callable $proceed): void
     {
         $message = $subject->getMessage();
-        if (!$message instanceof EmailMessage) {
+        // Magento 2.4.7 builds mail on Laminas, with no Symfony message to log or hand to SES:
+        // there the email goes the way Magento sends it, outside the Email Log.
+        if (!$message instanceof EmailMessage || !method_exists($message, 'getSymfonyMessage')) {
             $proceed();
             return;
         }
