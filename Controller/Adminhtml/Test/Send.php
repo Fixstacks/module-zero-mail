@@ -63,6 +63,9 @@ class Send extends Action implements HttpGetActionInterface
         $entry = $this->mailer->lastLogId() ? $this->log->get((int) $this->mailer->lastLogId()) : null;
         match ($entry['status'] ?? null) {
             MailLog::SENT => $this->messageManager->addSuccessMessage(__('A test email went to %1.', $email)),
+            MailLog::QUEUED => $this->messageManager->addSuccessMessage(
+                __('A test email to %1 is queued: the consumer zero.mail.send sends it (cron starts it). See the Email Log.', $email)
+            ),
             MailLog::SKIPPED => $this->messageManager->addNoticeMessage(
                 __('%1 is a test address (Test Address Domains): the email is in the Email Log, not sent.', $email)
             ),

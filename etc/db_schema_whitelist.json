@@ -13,7 +13,8 @@
             "body_type": true,
             "error": true,
             "message_id": true,
-            "resent_from": true
+            "resent_from": true,
+            "queued_message": true
         },
         "index": {
             "ZERO_MAIL_LOG_CREATED_AT": true,

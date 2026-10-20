@@ -32,7 +32,13 @@ class Ses
      */
     public function send(string $raw, string $from, array $recipients): string
     {
-        $client = ($this->clientFactory)(['version' => 'latest', 'region' => $this->config->sesRegion()]);
+        $client = ($this->clientFactory)([
+            'version' => 'latest',
+            'region' => $this->config->sesRegion(),
+            // A page waiting on SES (Send Through the Queue off) waits this long at most.
+            'http' => ['connect_timeout' => 5, 'timeout' => 20],
+            'retries' => 1,
+        ]);
         $args = [
             'FromEmailAddress' => $from,
             'Destination' => array_filter([

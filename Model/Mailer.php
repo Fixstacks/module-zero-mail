@@ -3,14 +3,16 @@
  * Copyright © 2026 Roman Pasichnyk
  * SPDX-License-Identifier: OSL-3.0 OR AFL-3.0
  */
-
 declare(strict_types=1);
 
 namespace Zero\Mail\Model;
 
 use Magento\Framework\Mail\Address;
 use Magento\Framework\Mail\EmailMessage;
+use Magento\Framework\MessageQueue\PublisherInterface;
 use Symfony\Component\Mime\Address as MimeAddress;
+use Symfony\Component\Mime\Header\MailboxListHeader;
+use Symfony\Component\Mime\Message as SymfonyMessage;
 use Symfony\Component\Mime\Part\AbstractMultipartPart;
 use Symfony\Component\Mime\Part\TextPart;
 
@@ -18,17 +20,21 @@ use Symfony\Component\Mime\Part\TextPart;
  * Every email on its way out (Plugin\Transport): the sender address set,
  * logged (without its one-time links and gift card codes: Secrets), then sent
  * through the transport chosen, or not: test addresses and "log only" stay in
- * the log.
+ * the log. With Send Through the Queue, the entry waits as queued and
+ * Queue\Consumer sends it (deliver()).
  */
 class Mailer
 {
+    public const TOPIC = 'zero.mail.send';
+
     private ?int $resending = null;
     private ?int $lastLogId = null;
 
     public function __construct(
         private readonly Config $config,
         private readonly MailLog $log,
-        private readonly Ses $ses
+        private readonly Ses $ses,
+        private readonly PublisherInterface $publisher
     ) {
     }
 
@@ -39,11 +45,6 @@ class Mailer
     public function send(EmailMessage $message, callable $magento): void
     {
         $this->setSender($message);
-        $recipients = [
-            'to' => $this->emails($message->getTo()),
-            'cc' => $this->emails($message->getCc() ?? []),
-            'bcc' => $this->emails($message->getBcc() ?? []),
-        ];
         [$body, $type] = $this->body($message);
         $from = $message->getFrom()[0] ?? null;
         $transport = $this->config->transport();
@@ -66,24 +67,48 @@ class Mailer
             $this->log->finish($id, MailLog::DISABLED);
             return;
         }
-        $all = array_merge(...array_values($recipients));
+        $symfony = $message->getSymfonyMessage();
+        $all = array_merge(...array_values($this->recipients($symfony)));
         if ($all && count(array_filter($all, [$this->config, 'isTestAddress'])) === count($all)) {
             $this->log->finish($id, MailLog::SKIPPED);
             return;
         }
+        if ($transport === Config::TRANSPORT_LOG) {
+            $this->log->finish($id, MailLog::LOGGED);
+            return;
+        }
+        if ($this->config->isQueued()) {
+            // The message itself, objects and all: Magento's serializer takes no objects.
+            // phpcs:ignore Magento2.Security.InsecureFunction
+            $this->log->queued($id, serialize($symfony));
+            $this->publisher->publish(self::TOPIC, json_encode(['log_id' => $id, 'attempt' => 1]));
+            return;
+        }
+        $this->deliver($id, $transport, $symfony, $magento);
+    }
+
+    /**
+     * Log entry $id sent now, through $transport (SES, or Magento's own:
+     * $magento), and finished as sent or failed.
+     *
+     * @param callable(): void $magento
+     * @throws \Throwable what the transport threw, logged first
+     */
+    public function deliver(int $id, string $transport, SymfonyMessage $message, callable $magento): void
+    {
         try {
             $messageId = null;
             if ($transport === Config::TRANSPORT_SES) {
-                $messageId = $this->ses->send($this->raw($message), (string) $from?->getEmail(), $recipients);
-            } elseif ($transport === Config::TRANSPORT_MAGENTO) {
+                $from = $this->addresses($message, 'From')[0] ?? '';
+                $messageId = $this->ses->send($this->raw($message), $from, $this->recipients($message));
+            } else {
                 $magento();
             }
         } catch (\Throwable $e) {
             $this->log->finish($id, MailLog::FAILED, $e->getMessage());
             throw $e;
         }
-        $status = $transport === Config::TRANSPORT_LOG ? MailLog::LOGGED : MailLog::SENT;
-        $this->log->finish($id, $status, null, $messageId);
+        $this->log->finish($id, MailLog::SENT, null, $messageId);
     }
 
     /**
@@ -122,12 +147,37 @@ class Mailer
     /**
      * The message as SES takes it: MIME, without the Bcc header.
      */
-    private function raw(EmailMessage $message): string
+    private function raw(SymfonyMessage $message): string
     {
-        $copy = clone $message->getSymfonyMessage();
+        $copy = clone $message;
         $copy->getHeaders()->remove('Bcc');
-
         return $copy->toString();
+    }
+
+    /**
+     * @return array{to: string[], cc: string[], bcc: string[]}
+     */
+    private function recipients(SymfonyMessage $message): array
+    {
+        return [
+            'to' => $this->addresses($message, 'To'),
+            'cc' => $this->addresses($message, 'Cc'),
+            'bcc' => $this->addresses($message, 'Bcc'),
+        ];
+    }
+
+    /**
+     * @return string[] the emails of a mailbox-list header
+     */
+    private function addresses(SymfonyMessage $message, string $header): array
+    {
+        $header = $message->getHeaders()->get($header);
+        if (!$header instanceof MailboxListHeader) {
+            return [];
+        }
+        return array_values(array_filter(
+            array_map(static fn (MimeAddress $a) => $a->getAddress(), $header->getAddresses())
+        ));
     }
 
     /**
@@ -146,17 +196,7 @@ class Mailer
                 $text = $candidate->getBody();
             }
         }
-
         return [(string) $text, 'plain'];
-    }
-
-    /**
-     * @param Address[] $addresses
-     * @return string[]
-     */
-    private function emails(array $addresses): array
-    {
-        return array_values(array_filter(array_map(static fn (Address $a) => (string) $a->getEmail(), $addresses)));
     }
 
     /**

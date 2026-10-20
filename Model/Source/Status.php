@@ -24,6 +24,7 @@ class Status implements OptionSourceInterface
             ['value' => MailLog::SKIPPED, 'label' => __('Test address, not sent')],
             ['value' => MailLog::LOGGED, 'label' => __('Logged only')],
             ['value' => MailLog::DISABLED, 'label' => __('Email communications off')],
+            ['value' => MailLog::QUEUED, 'label' => __('Queued')],
             ['value' => MailLog::SENDING, 'label' => __('Sending')],
         ];
     }

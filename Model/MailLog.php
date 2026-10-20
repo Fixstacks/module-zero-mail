@@ -11,11 +11,13 @@ namespace Zero\Mail\Model;
 use Magento\Framework\App\ResourceConnection;
 
 /**
- * The Email Log (zero_mail_log): a row per email, written as it goes out.
+ * The Email Log (zero_mail_log): a row per email, written as it goes out
+ * (or waits in the queue).
  */
 class MailLog
 {
     public const SENDING = 'sending';
+    public const QUEUED = 'queued';
     public const SENT = 'sent';
     public const LOGGED = 'logged';
     public const SKIPPED = 'skipped';
@@ -44,7 +46,20 @@ class MailLog
     {
         $this->resource->getConnection()->update(
             $this->table(),
-            ['status' => $status, 'error' => $error, 'message_id' => $messageId],
+            ['status' => $status, 'error' => $error, 'message_id' => $messageId, 'queued_message' => null],
+            ['log_id = ?' => $id]
+        );
+    }
+
+    /**
+     * Waiting for the consumer, the email itself (serialized) kept until it
+     * is sent; $error is what the last try said.
+     */
+    public function queued(int $id, string $message, ?string $error = null): void
+    {
+        $this->resource->getConnection()->update(
+            $this->table(),
+            ['status' => self::QUEUED, 'queued_message' => $message, 'error' => $error],
             ['log_id = ?' => $id]
         );
     }

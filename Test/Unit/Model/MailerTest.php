@@ -11,6 +11,7 @@ namespace Zero\Mail\Test\Unit\Model;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Mail\Address;
 use Magento\Framework\Mail\EmailMessage;
+use Magento\Framework\MessageQueue\PublisherInterface;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -34,6 +35,7 @@ class MailerTest extends TestCase
     private array $settings = [];
     private MailLog&MockObject $log;
     private Ses&MockObject $ses;
+    private PublisherInterface&MockObject $publisher;
     private Mailer $mailer;
     /** @var array<string, mixed>|null */
     private ?array $row = null;
@@ -58,7 +60,8 @@ class MailerTest extends TestCase
             $this->finished[] = $args;
         });
         $this->ses = $this->createMock(Ses::class);
-        $this->mailer = new Mailer(new Config($scopeConfig), $this->log, $this->ses);
+        $this->publisher = $this->createMock(PublisherInterface::class);
+        $this->mailer = new Mailer(new Config($scopeConfig), $this->log, $this->ses, $this->publisher);
     }
 
     public function testThroughMagentosTransportAndLogged(): void
@@ -135,6 +138,32 @@ class MailerTest extends TestCase
         } finally {
             $this->assertSame([[7, MailLog::FAILED, 'Connection refused', null]], $this->finished);
         }
+    }
+
+    public function testThroughTheQueueTheEntryWaitsForTheConsumer(): void
+    {
+        $this->settings['zero_mail/general/queue'] = '1';
+        $this->settings['zero_mail/general/transport'] = 'ses';
+        $this->ses->expects($this->never())->method('send');
+        $this->log->expects($this->once())->method('queued')->with(
+            7,
+            // phpcs:ignore Magento2.Security.InsecureFunction
+            $this->callback(fn (string $stored) => str_contains($stored, 'Thank you') && is_object(unserialize($stored))),
+            null
+        );
+        $this->publisher->expects($this->once())->method('publish')->with('zero.mail.send', '{"log_id":7,"attempt":1}');
+        $this->mailer->send($this->message(['olena@gmail.com' => '']), fn () => $this->fail('magento'));
+        $this->assertSame([], $this->finished);
+    }
+
+    public function testTestAddressesAndLogOnlyAreNotQueued(): void
+    {
+        $this->settings['zero_mail/general/queue'] = '1';
+        $this->publisher->expects($this->never())->method('publish');
+        $this->mailer->send($this->message(['zero-e2e@example.com' => '']), fn () => $this->fail('sent'));
+        $this->settings['zero_mail/general/transport'] = 'log';
+        $this->mailer->send($this->message(['olena@gmail.com' => '']), fn () => $this->fail('sent'));
+        $this->assertSame([MailLog::SKIPPED, MailLog::LOGGED], array_column($this->finished, 1));
     }
 
     public function testAResentEmailPointsToItsEntry(): void

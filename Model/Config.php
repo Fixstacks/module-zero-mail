@@ -33,6 +33,14 @@ class Config
             : self::TRANSPORT_MAGENTO;
     }
 
+    /**
+     * Send Through the Queue: logged as queued, sent by the consumer zero.mail.send.
+     */
+    public function isQueued(): bool
+    {
+        return $this->scopeConfig->isSetFlag('zero_mail/general/queue');
+    }
+
     public function senderEmail(): string
     {
         return trim((string) $this->scopeConfig->getValue('zero_mail/general/sender_email'));

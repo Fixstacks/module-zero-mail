@@ -8,6 +8,7 @@
         <zero_mail>
             <general>
                 <transport>magento</transport>
+                <queue>0</queue>
                 <sender_email/>
                 <test_domains>example.com
 example.org

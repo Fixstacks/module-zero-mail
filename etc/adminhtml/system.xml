@@ -17,6 +17,11 @@
                     <source_model>Zero\Mail\Model\Source\Transport</source_model>
                     <comment><![CDATA[Magento: Advanced > System > Mail Sending Settings (sendmail or SMTP). Amazon SES: its API with the server's AWS credentials (an EC2 role allowed ses:SendRawEmail), nothing to enter here. Log only: nothing leaves.]]></comment>
                 </field>
+                <field id="queue" translate="label comment" type="select" sortOrder="15" showInDefault="1" canRestore="1">
+                    <label>Send Through the Queue</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Yes: the page that sends an email doesn't wait for the mail server. The email is queued (Email Log: Queued) and sent by the consumer <code>zero.mail.send</code>, which cron starts: through RabbitMQ when env.php has <code>queue/amqp</code>, through the database queue otherwise. Three tries, then Failed. No: sent while the page waits. Magento 2.4.8 or newer.]]></comment>
+                </field>
                 <field id="sender_email" translate="label comment" type="text" sortOrder="20" showInDefault="1">
                     <label>Sender Email for All Emails</label>
                     <validate>validate-email</validate>
