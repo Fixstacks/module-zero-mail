@@ -1,4 +1,4 @@
-# fixstacks/module-zero-mail — licensing
+# zerofront/module-zero-mail — licensing
 
 Copyright © 2026 Roman Pasichnyk.
 
